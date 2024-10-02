@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảng Giá</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: "Times New Roman", Times, serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .logo-container {
+            flex: 0 0 auto;
+            margin-right: 20px;
+        }
+
+        .company-name {
+            color: #8B4513;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .contact-info {
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #FFA000;
+            color: white;
+            cursor: pointer;
+        }
+
+        #loading,
+        #error {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        #error {
+            color: red;
+        }
+
+        #printButton {
+            display: block;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .priceListInfo {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        #priceListInfo {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        #priceListInfo p {
+            margin: 5px 0;
+        }
+
+        #priceTypeFilter {
+            padding: 5px;
+            font-size: 16px;
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+
+            #printButton {
+                display: none;
+            }
+
+            th {
+                background-color: #FFA000 !important;
+                color: black !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="logo-container">
+            <img src="fsimage.png" alt="Logo" style="width: 100px; height: 100px;">
+        </div>
+        <div class="company-info">
+            <div class="company-name">CÔNG TY TNHH MTV TMSX GIA PHẠM</div>
+            <div class="contact-info">
+                Địa chỉ: Lô 203-204, đường N5, khu 17ha, KP.Bàu Ké,
+                TT.Tân Phú, H.Đồng Phú, T.Bình Phước<br>
+                MST: 3801171570 - Email: giaphambp@gmail.com <br>
+                Hotline: 0945 972 972
+            </div>
+        </div>
+    </div>
+
+    <h1 id="priceListTitle" style="text-align: center;">BẢNG GIÁ</h1>
+
+    <div id="priceListInfo"></div>
+
+    <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 20px;">
+        <label for="priceTypeFilter" style="margin-right: 10px;" class="no-print">Chọn Loại Bảng giá: </label>
+        <select id="priceTypeFilter" class="no-print" style="height: 36px; margin-right: 10px;">
+            <option value="all">Tất cả</option>
+            <option value="niemyet">Bảng giá Niêm yết</option>
+            <option value="banle">Bảng giá bán lẻ</option>
+            <option value="daily">Bảng giá Đại lý</option>
+            <option value="npp_dong">Bảng giá NPP đồng</option>
+            <option value="npp_bac">Bảng giá NPP bạc</option>
+            <option value="npp_vang">Bảng giá NPP vàng</option>
+        </select>
+        <button id="printButton" class="no-print" style="height: 36px; background-color: #4CAF50; color: white;">In bảng giá</button>
+    </div>
+    
+    
+    
+
+    <table id="priceTable">
+        <thead>
+            <tr>
+                <th data-sort="index">STT</th>
+                <th style="width: 25%;" data-sort="Tên hàng hoá">TÊN HÀNG</th>
+                <th data-sort="Mã hàng hoá">QUY CÁCH</th>
+                <th data-sort="DVT">ĐVT</th>
+                <th data-sort="gia_niem_yet" class="column-niemyet column-banle column-daily column-npp">GIÁ NIÊM YẾT
+                </th>
+                <th data-sort="gia_banle" class="column-banle">GIÁ BÁN LẺ</th>
+                <th data-sort="gia_daily" class="column-daily">GIÁ ĐẠI LÝ</th>
+                <th data-sort="gia_dong" class="column-npp column-npp_dong">GIÁ NPP ĐỒNG</th>
+                <th data-sort="gia_bac" class="column-npp column-npp_bac">GIÁ NPP BẠC</th>
+                <th data-sort="gia_vang" class="column-npp column-npp_vang">GIÁ NPP VÀNG</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+
+    <div id="loading">Đang tải dữ liệu...</div>
+    <div id="error"></div>
+
+    <script>
+        const appId = 'e87ce747-c3cf-4eb1-8702-cda10c3ecd5d';
+        const accessKey = 'V2-TT9gl-OImkm-dnOqs-dtheK-ucRDZ-4pGEh-xfjtb-PkHyK';
+        const region = 'www';
+
+        function apiRequest(tableName, action, data) {
+            const apiUrl = `https://${region}.appsheet.com/api/v2/apps/${appId}/tables/${tableName}/Action`;
+            return $.ajax({
+                url: apiUrl,
+                method: 'POST',
+                headers: {
+                    'ApplicationAccessKey': accessKey,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({
+                    Action: action,
+                    Properties: {
+                        Locale: 'vi-VN',
+                        Timezone: 'Asia/Ho_Chi_Minh'
+                    },
+                    ...data
+                })
+            });
+        }
+
+        function showLoading() {
+            $('#loading').show();
+            $('#error').hide();
+        }
+
+        function hideLoading() {
+            $('#loading').hide();
+        }
+
+        function showError(message) {
+            $('#error').text(message).show();
+        }
+
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            var results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+
+        function loadPriceListInfo(priceListId) {
+            showLoading();
+            apiRequest('Banggia', 'Find', {
+                Rows: [],
+                Properties: {
+                    Selector: `Filter(Banggia, [ID bảng giá] = "${priceListId}")`
+                }
+            })
+                .then(response => {
+                    if (Array.isArray(response) && response.length > 0) {
+                        const priceList = response[0];
+                        $('#priceListInfo').html(`
+                        <p><strong>Vùng:</strong> ${priceList['Vùng'] || 'N/A'}</p>
+                        <p><strong>Áp dụng từ:</strong> ${priceList['Áp dụng từ'] || 'N/A'} - <strong>Áp dụng đến:</strong> ${priceList['Áp dụng đến'] || 'N/A'}</p>
+                    `);
+                        loadPriceDetails(priceListId);
+                    } else {
+                        showError('Không tìm thấy thông tin bảng giá.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Lỗi khi tải thông tin bảng giá:', error);
+                    showError('Có lỗi xảy ra khi tải thông tin bảng giá.');
+                });
+        }
+
+        function updateTableVisibility(selectedType) {
+            const columns = ['niemyet', 'banle', 'daily', 'npp_dong', 'npp_bac', 'npp_vang'];
+            columns.forEach(column => {
+                $(`.column-${column}`).hide();
+            });
+
+            if (selectedType === 'all') {
+                columns.forEach(column => {
+                    $(`.column-${column}`).show();
+                });
+            } else {
+                $(`.column-${selectedType}`).show();
+                if (selectedType !== 'niemyet') {
+                    $('.column-niemyet').show();
+                }
+            }
+
+            // Update table title
+            let title = 'BẢNG GIÁ';
+            switch (selectedType) {
+                case 'niemyet': title = 'BẢNG GIÁ NIÊM YẾT'; break;
+                case 'banle': title = 'BẢNG GIÁ BÁN LẺ'; break;
+                case 'daily': title = 'BẢNG GIÁ ĐẠI LÝ'; break;
+                case 'npp_dong': title = 'BẢNG GIÁ NPP ĐỒNG'; break;
+                case 'npp_bac': title = 'BẢNG GIÁ NPP BẠC'; break;
+                case 'npp_vang': title = 'BẢNG GIÁ NPP VÀNG'; break;
+            }
+            $('#priceListTitle').text(title);
+        }
+
+        function loadPriceDetails(priceListId) {
+            apiRequest('BANGGIA_CT', 'Find', {
+                Rows: [],
+                Properties: {
+                    Selector: `Filter(BANGGIA_CT, [id_banggia] = "${priceListId}")`
+                }
+            })
+                .then(response => {
+                    const tableBody = $('#priceTable tbody');
+                    tableBody.empty();
+
+                    if (Array.isArray(response) && response.length > 0) {
+                        response.forEach((row, index) => {
+                            tableBody.append(`
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td>${row['Tên hàng hoá'] || ''}</td>
+                                <td>${row['Quy cách đóng gói'] || ''}</td>
+                                <td>${row['ĐVT'] || ''}</td>
+                                <td class="column-niemyet column-banle column-daily column-npp"><strong>${formatCurrency(row['gia_niem_yet'])}</strong></td>
+                                <td class="column-banle">
+                                    TLCL: ${row['tlcl_banle'] * 100 || ''}% <br>
+                                    <strong style="text-align: right; display: block;">${formatCurrency(row['gia_banle'])}</strong>
+                                    MCL: ${formatCurrency(row['mcl_banle'])}
+                                </td>
+                                <td class="column-daily">
+                                    TLCL: ${row['tlcl_daily'] * 100 || ''}% <br>
+                                    <strong style="text-align: right; display: block;">${formatCurrency(row['gia_daily'])}</strong>
+                                    MCL: ${formatCurrency(row['mcl_daily'])}
+                                </td>
+                                <td class="column-npp column-npp_dong">
+                                    TLCL: ${row['tlcl_dong'] * 100 || ''}% <br>
+                                    <strong style="text-align: right; display: block;">${formatCurrency(row['gia_dong'])}</strong>
+                                    MCL: ${formatCurrency(row['mcl_dong'])}
+                                </td>
+                                <td class="column-npp column-npp_bac">
+                                    TLCL: ${row['tlcl_bac'] * 100 || ''}% <br>
+                                    <strong style="text-align: right; display: block;">${formatCurrency(row['gia_bac'])}</strong>
+                                    MCL: ${formatCurrency(row['mcl_bac'])}
+                                </td>
+                                <td class="column-npp column-npp_vang">
+                                    TLCL: ${row['tlcl_vang'] * 100 || ''}% <br>
+                                    <strong style="text-align: right; display: block;">${formatCurrency(row['gia_vang'])}</strong>
+                                    MCL: ${formatCurrency(row['mcl_vang'])}
+                                </td>
+                            </tr>
+                        `);
+                        });
+                    } else {
+                        tableBody.append('<tr><td colspan="10">Không có dữ liệu chi tiết cho bảng giá này</td></tr>');
+                    }
+                    hideLoading();
+                    updateTableVisibility($('#priceTypeFilter').val());
+                })
+                .catch(error => {
+                    console.error('Lỗi khi tải chi tiết bảng giá:', error);
+                    showError('Có lỗi xảy ra khi tải chi tiết bảng giá.');
+                    $('#priceTable tbody').empty().append('<tr><td colspan="10">Không thể tải dữ liệu chi tiết</td></tr>');
+                    hideLoading();
+                });
+        }
+
+        function formatCurrency(value) {
+            if (!value) return '0';
+            const formattedValue = new Intl.NumberFormat('vi-VN', {
+                style: 'currency',
+                currency: 'VND',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            })
+                .format(value)
+                .replace('₫', '')
+                .trim();
+            return formattedValue + 'đ';
+        }
+
+        function sortTable(column) {
+            const table = document.getElementById('priceTable');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+
+            rows.sort((a, b) => {
+                const aValue = a.querySelector(`td:nth-child(${column + 1})`).textContent;
+                const bValue = b.querySelector(`td:nth-child(${column + 1})`).textContent;
+                return aValue.localeCompare(bValue, 'vi', { numeric: true });
+            });
+
+            tbody.innerHTML = '';
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        document.querySelectorAll('#priceTable th[data-sort]').forEach((th, index) => {
+            th.addEventListener('click', () => sortTable(index));
+        });
+
+        document.getElementById('printButton').addEventListener('click', () => {
+            window.print();
+        });
+
+        $('#priceTypeFilter').on('change', function () {
+            updateTableVisibility(this.value);
+        });
+
+        $(document).ready(() => {
+            const priceListId = getUrlParameter('priceListId');
+            if (priceListId) {
+                loadPriceListInfo(priceListId);
+            } else {
+                showError('Không tìm thấy ID bảng giá trong URL.');
+            }
+        });
+    </script>
+</body>
+
+</html>
