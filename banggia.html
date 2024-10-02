@@ -298,7 +298,7 @@
                                     MCL: ${formatCurrency(row['mcl_banle'])}
                                 </td>
                                 <td class="column-daily">
-                                    TLCL: ${row['tlcl_daily'] * 100 || ''}% <br>
+                                    TLCL: ${(row['tlcl_daily'] * 100).toFixed(2) || ''}% <br>
                                     <strong style="text-align: right; display: block;">${formatCurrency(row['gia_daily'])}</strong>
                                     MCL: ${formatCurrency(row['mcl_daily'])}
                                 </td>
@@ -318,7 +318,7 @@
                                     MCL: ${formatCurrency(row['mcl_vang'])}
                                 </td>
                             </tr>
-                        `);
+                        `);console.log(row['tlcl_daily']);
                         });
                     } else {
                         tableBody.append('<tr><td colspan="10">Không có dữ liệu chi tiết cho bảng giá này</td></tr>');
