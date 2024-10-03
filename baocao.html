@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thống kê Hội Doanh nhân trẻ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highcharts/10.3.3/highcharts.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+</head>
+
+<script>
+    tailwind.config = {
+        darkMode: 'class',
+        theme: {
+            extend: {
+                colors: {
+                    primary: '#3B82F6',
+                    secondary: '#10B981',
+                    accent: '#8B5CF6',
+                    warning: '#FBBF24',
+                    danger: '#EF4444',
+                }
+            }
+        }
+    }
+</script>
+
+<body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+    <div class="">
+        <nav class="bg-white dark:bg-gray-800 shadow-md">
+            <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+                <div class="flex items-center">
+                    <img src="https://wows.vn/wp-content/uploads/2022/04/WOWS-GROUP-logo.png" alt="WOWS Group"
+                        class="h-8 mr-4">
+                    <h1 class="text-2xl font-bold text-primary dark:text-white">Thống kê Doanh thu</h1>
+                </div>
+                <button id="darkModeToggle"
+                    class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 transition-colors duration-300">
+                    <i class="fas fa-moon text-gray-800 dark:text-white"></i>
+                </button>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Tab navigation -->
+    <div class="container mx-auto px-4 py-6">
+        <div class="flex border-b border-gray-200 dark:border-gray-700">
+            <button
+                class="tab-button py-2 px-4 text-sm font-medium text-center text-gray-500 dark:text-gray-400 border-b-2 border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300"
+                data-target="customerTab">
+                Thống kê Khách hàng
+            </button>
+            <button
+                class="tab-button py-2 px-4 text-sm font-medium text-center text-gray-500 dark:text-gray-400 border-b-2 border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300 active"
+                data-target="employeeTab">
+                Thống kê Nhân viên
+            </button>
+            <button
+                class="tab-button py-2 px-4 text-sm font-medium text-center text-gray-500 dark:text-gray-400 border-b-2 border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300"
+                data-target="productTab">
+                Thống kê Hàng hóa
+            </button>
+
+        </div>
+    </div>
+
+    <!-- Tab content -->
+    <div class="container mx-auto px-4 py-6">
+        <div id="employeeTab" class="tab-content hidden">
+            <div class="bg-white dark:bg-gray-800 shadow-md mb-6">
+                <div class="container mx-auto px-4 py-3">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <select id="employeeFilter"
+                            class="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary transition-all duration-300">
+                            <option value="">Nhân viên phụ trách</option>
+                        </select>
+                        <input type="text" id="employeeDateRangeFilter" placeholder="Chọn phạm vi ngày"
+                            class="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary transition-all duration-300">
+                        <div></div> <!-- Placeholder for grid alignment -->
+                        <button id="resetEmployeeFilters"
+                            class="w-full bg-primary text-white px-4 py-2 rounded-md hover:bg-blue-600 transition duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                            <i class="fas fa-sync-alt mr-2"></i>Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 shadow-md p-4 rounded-md">
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-2">Doanh thu theo nhân viên</h2>
+                <div id="employeeRevenueContainer" style="width:100%; height:400px;"></div>
+            </div>
+        </div>
+
+        <div id="productTab" class="tab-content hidden">
+            <div class="bg-white dark:bg-gray-800 shadow-md mb-6">
+                <div class="container mx-auto px-4 py-3">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <select id="productFilter"
+                            class="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary transition-all duration-300">
+                            <option value="">Sản phẩm</option>
+                        </select>
+                        <input type="text" id="productDateRangeFilter" placeholder="Chọn phạm vi ngày"
+                            class="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary transition-all duration-300">
+                        <div></div> <!-- Placeholder for grid alignment -->
+                        <button id="resetProductFilters"
+                            class="w-full bg-primary text-white px-4 py-2 rounded-md hover:bg-blue-600 transition duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                            <i class="fas fa-sync-alt mr-2"></i>Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 shadow-md p-4 rounded-md">
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-2">Doanh thu theo sản phẩm</h2>
+                <div id="productRevenueContainer" style="width:100%; height:400px;"></div>
+            </div>
+        </div>
+
+
+        <!-- Customer Tab Content -->
+        <div id="customerTab" class="tab-content ">
+            <div class="bg-white dark:bg-gray-800 shadow-md mb-6">
+                <div class="container mx-auto px-4 py-3">
+                    <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                        <select id="customerFilter"
+                            class="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary transition-all duration-300">
+                            <option value="">Chọn khách hàng</option>
+                        </select>
+                        <select id="sourceFilter"
+                            class="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary transition-all duration-300">
+                            <option value="">Nguồn khách hàng</option>
+                        </select>
+                        <select id="regionFilter"
+                            class="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary transition-all duration-300">
+                            <option value="">Khu vực</option>
+                        </select>
+                        <select id="groupFilter"
+                            class="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary transition-all duration-300">
+                            <option value="">Nhóm khách hàng</option>
+                        </select>
+                        <input type="text" id="customerDateRangeFilter" placeholder="Chọn phạm vi ngày"
+                            class="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary transition-all duration-300">
+                        <button id="resetCustomerFilters"
+                            class="w-full bg-primary text-white px-4 py-2 rounded-md hover:bg-blue-600 transition duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                            <i class="fas fa-sync-alt mr-2"></i>Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 shadow-md p-4 rounded-md mb-4">
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-2">Top 10 khách hàng theo doanh thu
+                </h2>
+                <div id="customerRevenueContainer" style="width:100%; height:400px;"></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white dark:bg-gray-800 shadow-md p-4 rounded-md">
+                    <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-2">Phân bổ theo nguồn khách hàng
+                    </h2>
+                    <div id="customerSourceChart" style="width:100%; height:300px;"></div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 shadow-md p-4 rounded-md">
+                    <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-2">Phân bổ theo khu vực</h2>
+                    <div id="customerRegionChart" style="width:100%; height:300px;"></div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 shadow-md p-4 rounded-md">
+                    <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-2">Phân bổ theo nhóm khách hàng
+                    </h2>
+                    <div id="customerGroupChart" style="width:100%; height:300px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            const htmlElement = document.documentElement;
+            const appId = 'e87ce747-c3cf-4eb1-8702-cda10c3ecd5d';
+            const accessKey = 'V2-TT9gl-OImkm-dnOqs-dtheK-ucRDZ-4pGEh-xfjtb-PkHyK';
+            const region = 'www';
+
+            let employeeData = [];
+            let productData = [];
+            let customerData = [];
+
+            // Function to toggle dark mode
+            function toggleDarkMode() {
+                htmlElement.classList.toggle('dark');
+                const isDarkMode = htmlElement.classList.contains('dark');
+                localStorage.setItem('darkMode', isDarkMode);
+                updateDarkModeIcon();
+            }
+
+            function updateDarkModeIcon() {
+                const isDarkMode = htmlElement.classList.contains('dark');
+                darkModeToggle.innerHTML = isDarkMode
+                    ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>'
+                    : '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-800 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>';
+            }
+
+            darkModeToggle.addEventListener('click', toggleDarkMode);
+
+            // Khởi tạo Flatpickr cho bộ lọc ngày
+            flatpickr("#employeeDateRangeFilter", {
+                mode: "range",
+                dateFormat: "Y-m-d",
+                onChange: function (selectedDates, dateStr, instance) {
+                    applyEmployeeFilters();
+                }
+            });
+
+            flatpickr("#productDateRangeFilter", {
+                mode: "range",
+                dateFormat: "Y-m-d",
+                onChange: function (selectedDates, dateStr, instance) {
+                    applyProductFilters();
+                }
+            });
+
+            // Khởi tạo Flatpickr cho bộ lọc ngày khách hàng
+            flatpickr("#customerDateRangeFilter", {
+                mode: "range",
+                dateFormat: "Y-m-d",
+                onChange: function (selectedDates, dateStr, instance) {
+                    applyCustomerFilters();
+                }
+            });
+
+            // Hàm để áp dụng bộ lọc nhân viên
+            function applyEmployeeFilters() {
+                const employeeFilter = document.getElementById('employeeFilter').value;
+                const dateRangeFilter = document.getElementById('employeeDateRangeFilter').value;
+
+                const filteredEmployeeData = employeeData.filter(item => {
+                    const matchesEmployee = !employeeFilter || item.ma_nhan_vien === employeeFilter;
+                    const matchesDateRange = !dateRangeFilter || isDateInRange(item.cap_nhat, dateRangeFilter);
+                    return matchesEmployee && matchesDateRange && parseFloat(item.doanh_thu_tong) > 0;
+                });
+
+                renderEmployeeRevenueChart(filteredEmployeeData);
+            }
+
+            // Hàm để áp dụng bộ lọc sản phẩm
+            function applyProductFilters() {
+                const productFilter = document.getElementById('productFilter').value;
+                const dateRangeFilter = document.getElementById('productDateRangeFilter').value;
+
+                const filteredProductData = productData.filter(item => {
+                    const matchesProduct = !productFilter || item.ten_hanghoa === productFilter;
+                    const matchesDateRange = !dateRangeFilter || isDateInRange(item.ngay_ban, dateRangeFilter);
+                    return matchesProduct && matchesDateRange && parseFloat(item.doanh_thu) > 0;
+                });
+
+                renderProductRevenueChart(filteredProductData);
+            }
+
+            // Hàm để áp dụng bộ lọc khách hàng
+            // Cập nhật hàm applyCustomerFilters
+            function applyCustomerFilters() {
+                const customerFilter = document.getElementById('customerFilter').value;
+                const sourceFilter = document.getElementById('sourceFilter').value;
+                const regionFilter = document.getElementById('regionFilter').value;
+                const groupFilter = document.getElementById('groupFilter').value;
+                const dateRangeFilter = document.getElementById('customerDateRangeFilter').value;
+
+                const filteredCustomerData = customerData.filter(item => {
+                    const matchesCustomer = !customerFilter || item.ten_khach_hang === customerFilter;
+                    const matchesSource = !sourceFilter || item.nguon_khachhang === sourceFilter;
+                    const matchesRegion = !regionFilter || item.khuvuc_khachhang === regionFilter;
+                    const matchesGroup = !groupFilter || item.tennhom_khachhang === groupFilter;
+                    const matchesDateRange = !dateRangeFilter || isDateInRange(item.cap_nhat, dateRangeFilter);
+                    return matchesCustomer && matchesSource && matchesRegion && matchesGroup && matchesDateRange && parseFloat(item.doanhthu_khachhang) > 0;
+                });
+
+                renderCustomerRevenueChart(filteredCustomerData);
+            }
+
+            // Hàm để điền dữ liệu vào các bộ lọc
+            function populateFilters(data) {
+                const sourceFilter = document.getElementById('sourceFilter');
+                const regionFilter = document.getElementById('regionFilter');
+                const groupFilter = document.getElementById('groupFilter');
+
+                const sources = [...new Set(data.map(item => item.nguon_khachhang))];
+                const regions = [...new Set(data.map(item => item.khuvuc_khachhang))];
+                const groups = [...new Set(data.map(item => item.tennhom_khachhang))];
+
+                populateSelect(sourceFilter, sources);
+                populateSelect(regionFilter, regions);
+                populateSelect(groupFilter, groups);
+            }
+
+            function populateSelect(select, options) {
+                options.forEach(option => {
+                    const opt = document.createElement('option');
+                    opt.value = option;
+                    opt.textContent = option;
+                    select.appendChild(opt);
+                });
+            }
+
+
+
+            // Hàm kiểm tra xem một ngày có nằm trong khoảng đã chọn không
+            function isDateInRange(date, range) {
+                if (!range) return true;
+                const [start, end] = range.split(' to ');
+                return moment(date).isBetween(start, end, null, '[]');
+            }
+
+            // Cập nhật hàm fetchEmployeeData
+            async function fetchEmployeeData() {
+                try {
+                    const response = await apiRequest('DOANH_THU', 'Find', {
+                        Selector: "Filter(DOANH_THU, true)"
+                    });
+                    if (!Array.isArray(response) || response.length === 0) {
+                        throw new Error("Dữ liệu không hợp lệ");
+                    }
+                    employeeData = response;
+                    console.log("Dữ liệu từ DOANH_THU:", employeeData);
+                    populateEmployeeFilter(employeeData);
+                    renderEmployeeRevenueChart(employeeData);
+                } catch (error) {
+                    console.error("Lỗi khi lấy dữ liệu từ DOANH_THU:", error);
+                }
+            }
+
+            // Cập nhật hàm fetchProductData
+            async function fetchProductData() {
+                try {
+                    const response = await apiRequest('DOANHTHU_HANGHOA', 'Find', {
+                        Selector: "Filter(DOANHTHU_HANGHOA, true)"
+                    });
+                    if (!Array.isArray(response) || response.length === 0) {
+                        throw new Error("Dữ liệu không hợp lệ");
+                    }
+                    productData = response;
+                    console.log("Dữ liệu từ DOANHTHU_HANGHOA:", productData);
+                    populateProductFilter(productData);
+                    renderProductRevenueChart(productData);
+                } catch (error) {
+                    console.error("Lỗi khi lấy dữ liệu từ DOANHTHU_HANGHOA:", error);
+                }
+            }
+
+            // Cập nhật hàm fetchCustomerData
+            // Cập nhật hàm fetchCustomerData
+            async function fetchCustomerData() {
+                try {
+                    const response = await apiRequest('DOANHTHU_KHACHHANG', 'Find', {
+                        Selector: "Filter(DOANHTHU_KHACHHANG, true)"
+                    });
+                    if (!Array.isArray(response) || response.length === 0) {
+                        throw new Error("Dữ liệu không hợp lệ");
+                    }
+                    customerData = response;
+                    console.log("Dữ liệu từ DOANHTHU_KHACHHANG:", customerData);
+                    populateCustomerFilter(customerData);
+                    populateFilters(customerData);
+                    renderCustomerRevenueChart(customerData);
+                } catch (error) {
+                    console.error("Lỗi khi lấy dữ liệu từ DOANHTHU_KHACHHANG:", error);
+                }
+            }
+
+            // Hàm để điền dữ liệu vào bộ lọc nhân viên
+            function populateEmployeeFilter(data) {
+                const employeeFilter = document.getElementById('employeeFilter');
+                const employees = [...new Set(data.map(item => item.ma_nhan_vien))];
+                employees.forEach(employee => {
+                    const option = document.createElement('option');
+                    option.value = employee;
+                    option.textContent = employee;
+                    employeeFilter.appendChild(option);
+                });
+            }
+
+            // Hàm để điền dữ liệu vào bộ lọc sản phẩm
+            function populateProductFilter(data) {
+                const productFilter = document.getElementById('productFilter');
+                const products = [...new Set(data.map(item => item.ten_hanghoa))];
+                products.forEach(product => {
+                    const option = document.createElement('option');
+                    option.value = product;
+                    option.textContent = product;
+                    productFilter.appendChild(option);
+                });
+            }
+
+            // Hàm để điền dữ liệu vào bộ lọc khách hàng
+            function populateCustomerFilter(data) {
+                const customerFilter = document.getElementById('customerFilter');
+                const customers = [...new Set(data.map(item => item.ten_khach_hang))];
+                customers.forEach(customer => {
+                    const option = document.createElement('option');
+                    option.value = customer;
+                    option.textContent = customer;
+                    customerFilter.appendChild(option);
+                });
+            }
+
+
+            // Function to create employee revenue chart
+            function renderEmployeeRevenueChart(data) {
+                const employeeRevenue = data.reduce((acc, curr) => {
+                    const employee = curr.ma_nhan_vien || "Không xác định";
+                    const revenue = parseFloat(curr.doanh_thu_tong) || 0;
+                    if (revenue > 0) {
+                        if (!acc[employee]) acc[employee] = 0;
+                        acc[employee] += revenue;
+                    }
+                    return acc;
+                }, {});
+
+                const employeeRevenueData = Object.keys(employeeRevenue).map(key => ({
+                    name: key,
+                    y: employeeRevenue[key]
+                }));
+
+                Highcharts.chart('employeeRevenueContainer', {
+                    chart: {
+                        type: 'column'
+                    },
+                    title: {
+                        text: 'Doanh thu theo nhân viên'
+                    },
+                    xAxis: {
+                        type: 'category',
+                        title: {
+                            text: 'Nhân viên'
+                        }
+                    },
+                    yAxis: {
+                        title: {
+                            text: 'Doanh thu (VND)'
+                        }
+                    },
+                    series: [{
+                        name: 'Doanh thu',
+                        data: employeeRevenueData
+                    }]
+                });
+            }
+
+            // Function to create product revenue chart
+            function renderProductRevenueChart(data) {
+                const productRevenue = data.reduce((acc, curr) => {
+                    const product = curr.ten_hanghoa || "Không xác định";
+                    const revenue = parseFloat(curr.doanh_thu) || 0;
+                    if (revenue > 0) {
+                        if (!acc[product]) acc[product] = 0;
+                        acc[product] += revenue;
+                    }
+                    return acc;
+                }, {});
+
+                let productRevenueData = Object.entries(productRevenue)
+                    .map(([name, y]) => ({ name, y }))
+                    .sort((a, b) => b.y - a.y)
+                    .slice(0, 10);
+
+                Highcharts.chart('productRevenueContainer', {
+                    chart: {
+                        type: 'bar'
+                    },
+                    title: {
+                        text: 'Top 10 sản phẩm theo doanh thu'
+                    },
+                    xAxis: {
+                        type: 'category',
+                        title: {
+                            text: 'Sản phẩm'
+                        }
+                    },
+                    yAxis: {
+                        title: {
+                            text: 'Doanh thu (VND)'
+                        },
+                        labels: {
+                            formatter: function () {
+                                return this.value.toLocaleString('vi-VN') + ' VND';
+                            }
+                        }
+                    },
+                    legend: {
+                        enabled: false
+                    },
+                    tooltip: {
+                        pointFormatter: function () {
+                            return '<b>Doanh thu:</b> ' + this.y.toLocaleString('vi-VN') + ' VND';
+                        }
+                    },
+                    series: [{
+                        name: 'Doanh thu',
+                        data: productRevenueData,
+                        dataLabels: {
+                            enabled: true,
+                            formatter: function () {
+                                return this.y.toLocaleString('vi-VN') + ' VND';
+                            }
+                        }
+                    }]
+                });
+            }
+
+            // Function to create customer revenue chart
+            function renderCustomerRevenueChart(data) {
+                // Lọc và sắp xếp dữ liệu
+                const customerRevenue = data.reduce((acc, curr) => {
+                    const customer = curr.ten_khach_hang || "Không xác định";
+                    const revenue = parseFloat(curr.doanhthu_khachhang) || 0;
+                    if (revenue > 0) {
+                        if (!acc[customer]) acc[customer] = 0;
+                        acc[customer] += revenue;
+                    }
+                    return acc;
+                }, {});
+
+                // Chuyển đổi thành mảng và sắp xếp theo doanh thu giảm dần
+                let customerRevenueData = Object.entries(customerRevenue)
+                    .map(([name, y]) => ({ name, y }))
+                    .sort((a, b) => b.y - a.y);
+
+                // Lấy top 10 khách hàng có doanh thu cao nhất
+                customerRevenueData = customerRevenueData.slice(0, 10);
+
+                Highcharts.chart('customerRevenueContainer', {
+                    chart: {
+                        type: 'bar'
+                    },
+                    title: {
+                        text: 'Top 10 khách hàng theo doanh thu'
+                    },
+                    xAxis: {
+                        type: 'category',
+                        title: {
+                            text: 'Khách hàng'
+                        }
+                    },
+                    yAxis: {
+                        title: {
+                            text: 'Doanh thu (VND)'
+                        },
+                        labels: {
+                            formatter: function () {
+                                return this.value.toLocaleString('vi-VN') + ' VND';
+                            }
+                        }
+                    },
+                    legend: {
+                        enabled: false
+                    },
+                    tooltip: {
+                        pointFormatter: function () {
+                            return `<b>Doanh thu:</b> ${this.y.toLocaleString('vi-VN')} VND<br>` +
+                                `<b>Nguồn:</b> ${this.point.nguon_khachhang}<br>` +
+                                `<b>Khu vực:</b> ${this.point.khuvuc_khachhang}<br>` +
+                                `<b>Nhóm:</b> ${this.point.tennhom_khachhang}`;
+                        }
+                    },
+                    series: [{
+                        name: 'Doanh thu',
+                        data: customerRevenueData.map(item => ({
+                            name: item.name,
+                            y: item.y,
+                            nguon_khachhang: item.nguon_khachhang,
+                            khuvuc_khachhang: item.khuvuc_khachhang,
+                            tennhom_khachhang: item.tennhom_khachhang
+                        })),
+                    }]
+                });
+
+                // Tạo biểu đồ tròn cho nguồn khách hàng
+                const sourceData = preparePieChartData(data, 'nguon_khachhang');
+                createPieChart('customerSourceChart', sourceData, 'Phân bổ theo nguồn khách hàng');
+
+                // Tạo biểu đồ tròn cho khu vực khách hàng
+                const regionData = preparePieChartData(data, 'khuvuc_khachhang');
+                createPieChart('customerRegionChart', regionData, 'Phân bổ theo khu vực');
+
+                // Tạo biểu đồ tròn cho nhóm khách hàng
+                const groupData = preparePieChartData(data, 'tennhom_khachhang');
+                createPieChart('customerGroupChart', groupData, 'Phân bổ theo nhóm khách hàng');
+
+                // Cập nhật biểu đồ tròn
+                updatePieChart('customerSourceChart', data, 'nguon_khachhang', 'Phân bổ theo nguồn khách hàng');
+                updatePieChart('customerRegionChart', data, 'khuvuc_khachhang', 'Phân bổ theo khu vực');
+                updatePieChart('customerGroupChart', data, 'tennhom_khachhang', 'Phân bổ theo nhóm khách hàng');
+            }
+
+            function updatePieChart(containerId, data, key, title) {
+                const pieData = preparePieChartData(data, key);
+                createPieChart(containerId, pieData, title);
+            }
+
+
+            // Hàm để tạo biểu đồ tròn
+            function createPieChart(containerId, data, title) {
+                Highcharts.chart(containerId, {
+                    chart: {
+                        type: 'pie'
+                    },
+                    title: {
+                        text: title
+                    },
+                    tooltip: {
+                        pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
+                    },
+                    accessibility: {
+                        point: {
+                            valueSuffix: '%'
+                        }
+                    },
+                    plotOptions: {
+                        pie: {
+                            allowPointSelect: true,
+                            cursor: 'pointer',
+                            dataLabels: {
+                                enabled: true,
+                                format: '<b>{point.name}</b>: {point.percentage:.1f} %'
+                            }
+                        }
+                    },
+                    series: [{
+                        name: 'Tỷ lệ',
+                        colorByPoint: true,
+                        data: data
+                    }]
+                });
+            }
+
+            // Hàm để tạo dữ liệu cho biểu đồ tròn
+            function preparePieChartData(data, key) {
+                const total = data.length;
+                const countMap = data.reduce((acc, curr) => {
+                    const value = curr[key] || 'Không xác định';
+                    acc[value] = (acc[value] || 0) + 1;
+                    return acc;
+                }, {});
+
+                return Object.entries(countMap).map(([name, count]) => ({
+                    name,
+                    y: (count / total) * 100
+                }));
+            }
+
+            // Function to make API requests
+            function apiRequest(tableName, action, data) {
+                const apiUrl = `https://${region}.appsheet.com/api/v2/apps/${appId}/tables/${tableName}/Action`;
+                return fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'ApplicationAccessKey': accessKey,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        Action: action,
+                        Properties: {},
+                        ...data
+                    })
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .catch(error => {
+                        console.error("Lỗi API:", error);
+                        throw error;
+                    });
+            }
+
+            // Thêm sự kiện lắng nghe cho các bộ lọc
+            document.getElementById('employeeFilter').addEventListener('change', applyEmployeeFilters);
+            document.getElementById('productFilter').addEventListener('change', applyProductFilters);
+            // Thêm sự kiện lắng nghe cho bộ lọc khách hàng
+            document.getElementById('customerFilter').addEventListener('change', applyCustomerFilters);
+            // Thêm sự kiện lắng nghe cho các bộ lọc mới của khách hàng
+
+            document.getElementById('sourceFilter').addEventListener('change', applyCustomerFilters);
+            document.getElementById('regionFilter').addEventListener('change', applyCustomerFilters);
+            document.getElementById('groupFilter').addEventListener('change', applyCustomerFilters);
+
+            // Cập nhật sự kiện nút Reset cho nhân viên
+            document.getElementById('resetEmployeeFilters').addEventListener('click', () => {
+                document.getElementById('employeeFilter').value = '';
+                document.getElementById('employeeDateRangeFilter').value = '';
+                applyEmployeeFilters();
+            });
+
+            // Cập nhật sự kiện nút Reset cho sản phẩm
+            document.getElementById('resetProductFilters').addEventListener('click', () => {
+                document.getElementById('productFilter').value = '';
+                document.getElementById('productDateRangeFilter').value = '';
+                applyProductFilters();
+            });
+
+            // Cập nhật sự kiện nút Reset cho khách hàng
+            // Cập nhật sự kiện nút Reset
+            document.getElementById('resetCustomerFilters').addEventListener('click', () => {
+                document.getElementById('customerFilter').value = '';
+                document.getElementById('sourceFilter').value = '';
+                document.getElementById('regionFilter').value = '';
+                document.getElementById('groupFilter').value = '';
+                document.getElementById('customerDateRangeFilter').value = '';
+                applyCustomerFilters();
+            });
+
+            // Tab switching functionality
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const target = button.dataset.target;
+
+                    // Hide all tab contents and deactivate all buttons
+                    tabContents.forEach(content => content.classList.add('hidden'));
+                    tabButtons.forEach(btn => btn.classList.remove('active', 'text-blue-600', 'border-blue-600'));
+
+                    // Show the target tab content and activate the clicked button
+                    document.getElementById(target).classList.remove('hidden');
+                    button.classList.add('active', 'text-blue-600', 'border-blue-600');
+                });
+            });
+
+            // Cập nhật hàm khởi tạo
+            (async function init() {
+                await fetchEmployeeData();
+                await fetchProductData();
+                await fetchCustomerData();
+                applyEmployeeFilters();
+                applyProductFilters();
+                applyCustomerFilters();
+            })();
+        </script>
+</body>
+
+</html>
