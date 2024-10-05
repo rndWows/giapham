@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đơn Đặt Hàng</title>
+    <style>
+        @page {
+            size: A4;
+        }
+
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            line-height: 1.6;
+            margin: 0;
+            background-color: #ccc;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+        }
+
+        p {
+            line-height: 1;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .company-info,
+        .form-info {
+            flex: 1;
+        }
+
+        .company-info p,
+        .form-info p {
+            margin: 0;
+            text-align: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #ffa500;
+        }
+
+        .total-row td {
+            font-weight: bold;
+        }
+
+        .signatures {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .signature {
+            text-align: center;
+            flex: 1;
+        }
+
+        #errorMessage {
+            color: red;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* Loading overlay styles */
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #ffa500;
+            border-top: 5px solid #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Loading overlay -->
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container">
+        <div id="errorMessage"></div>
+        <div class="header">
+            <div class="company-info">
+                <p><strong>CÔNG TY TNHH MTV TM SX GIA PHẠM</strong></p>
+                <p>MST: 3801715370</p>
+            </div>
+            <div class="form-info">
+                <p><strong>Mẫu số 02 - VT</strong></p>
+                <p>(Ban hành theo Thông tư số 132/2018/TT-BTC ngày 28/12/2018 của Bộ Tài chính)</p>
+            </div>
+        </div>
+
+        <h1>ĐƠN ĐẶT HÀNG</h1>
+
+        <p id="orderDate"><strong>Ngày: </strong></p>
+        <p id="customerName"><strong>Họ và tên người nhận hàng:</strong></p>
+        <p id="customerAddress"><strong>Địa chỉ:</strong></p>
+        <p id="exportReason"><strong>Lý do xuất kho:</strong></p>
+        <p id="warehouseLocation"><strong>Xuất tại kho (ngăn lô):</strong></p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>STT</th>
+                    <th>Mặt hàng</th>
+                    <th>ĐVT</th>
+                    <th>Số lượng</th>
+                    <th>Đơn giá</th>
+                    <th>Thành tiền</th>
+                </tr>
+            </thead>
+            <tbody id="orderDetails">
+                <!-- Order details will be inserted here -->
+            </tbody>
+        </table>
+
+        <p id="totalInWords"><strong>Số tiền bằng chữ:</strong></p>
+
+        <div class="signatures">
+            <div class="signature">
+                <p><strong>Người nhận hàng</strong></p>
+                <p><em>(Ký, họ tên)</em></p>
+            </div>
+            <div class="signature">
+                <p><strong>Thủ kho</strong></p>
+                <p><em>(Ký, họ tên)</em></p>
+            </div>
+            <div class="signature">
+                <p><strong>Kế toán trưởng</strong></p>
+                <p><em>(Hoặc bộ phận có phân công)</em></p>
+            </div>
+            <div class="signature">
+                <p><strong>Giám đốc</strong></p>
+                <p><em>(Ký, họ tên)</em></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script>
+        const appId = 'e87ce747-c3cf-4eb1-8702-cda10c3ecd5d';
+        const apiKey = 'V2-TT9gl-OImkm-dnOqs-dtheK-ucRDZ-4pGEh-xfjtb-PkHyK';
+
+        function getUrlParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        async function apiRequest(tableName, action, data) {
+            const apiUrl = `https://www.appsheet.com/api/v2/apps/${appId}/tables/${tableName}/Action`;
+            console.log(`Sending request to ${apiUrl}`, data);
+            try {
+                const response = await $.ajax({
+                    url: apiUrl,
+                    method: 'POST',
+                    headers: {
+                        'ApplicationAccessKey': apiKey,
+                        'Content-Type': 'application/json'
+                    },
+                    data: JSON.stringify({
+                        Action: action,
+                        Properties: {
+                            Locale: 'vi-VN',
+                            Timezone: 'Asia/Ho_Chi_Minh'
+                        },
+                        ...data
+                    })
+                });
+                console.log(`Response from ${tableName}:`, response);
+                return response;
+            } catch (error) {
+                console.error(`API request error for ${tableName}:`, error);
+                throw error;
+            }
+        }
+
+        async function fetchDataFromAppSheet(tableName, orderId) {
+            try {
+                console.log(`Đang lấy dữ liệu từ ${tableName} cho mã đơn hàng: ${orderId}`);
+                const response = await apiRequest(tableName, 'Find', {
+                    Selector: `[ma_don_hang] = '${orderId}'`
+                });
+                console.log(`Dữ liệu nhận được từ ${tableName}:`, JSON.stringify(response));
+
+                if (response === null || response === undefined || response === "") {
+                    console.log(`Không có dữ liệu từ ${tableName}`);
+                    return null;
+                }
+
+                if (Array.isArray(response)) {
+                    return response;
+                } else if (typeof response === 'object' && Object.keys(response).length > 0) {
+                    return [response];
+                } else {
+                    console.log(`Định dạng phản hồi không mong đợi từ ${tableName}: ${JSON.stringify(response)}`);
+                    return null;
+                }
+            } catch (error) {
+                console.error(`Lỗi khi lấy dữ liệu từ ${tableName}:`, error);
+                throw error;
+            }
+        }
+
+        async function getCustomerInfo(customerId) {
+            try {
+                const customerData = await apiRequest('DSKH', 'Find', {
+                    Selector: `[ma_khach_hang] = '${customerId}'`
+                });
+                if (customerData && customerData.length > 0) {
+                    return customerData[0];
+                } else {
+                    console.error('Không tìm thấy thông tin khách hàng');
+                    return null;
+                }
+            } catch (error) {
+                console.error('Lỗi khi lấy thông tin khách hàng:', error);
+                return null;
+            }
+        }
+
+        async function updateOrderInfo(orderData, orderId) {
+            const order = orderData.find(o => o.ma_don_hang === orderId);
+            if (!order) {
+                throw new Error(`Không tìm thấy đơn hàng với mã: ${orderId}`);
+            }
+
+            document.getElementById('orderDate').textContent = `Ngày: ${formatDate(order.ngay_tao)}`;
+
+            const customerInfo = await getCustomerInfo(order.ma_khach_hang);
+            if (customerInfo) {
+                document.getElementById('customerName').innerHTML = `<strong>Họ và tên người nhận hàng:</strong> ${customerInfo.ten_khach_hang}`;
+                document.getElementById('customerAddress').innerHTML = `<strong>Địa chỉ:</strong> ${customerInfo.dia_chi_khach_hang}`;
+            } else {
+                document.getElementById('customerName').innerHTML = `<strong>Họ và tên người nhận hàng:</strong> ${order.ma_khach_hang} (Không tìm thấy thông tin)`;
+                document.getElementById('customerAddress').innerHTML = `<strong>Địa chỉ:</strong> Không có thông tin`;
+            }
+
+            document.getElementById('exportReason').innerHTML = `<strong>Lý do xuất kho:</strong> ${order.ly_do_xuat_kho}`;
+            document.getElementById('warehouseLocation').innerHTML = `<strong>Xuất tại kho (ngăn lô):</strong> kho Công Ty Gia Phạm`;
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        async function updateOrderDetails(detailsData, orderId) {
+            const tbody = document.getElementById('orderDetails');
+            tbody.innerHTML = '';
+
+            try {
+                let orderData = await fetchDataFromAppSheet('BANHANG', orderId);
+
+                if (!orderData || orderData.length === 0) {
+                    console.log("Không tìm thấy dữ liệu trong BANHANG, đang sử dụng dữ liệu từ DONHANG");
+                    orderData = await fetchDataFromAppSheet('DONHANG', orderId);
+                }
+
+                if (!orderData || orderData.length === 0) {
+                    throw new Error("Không tìm thấy dữ liệu đơn hàng");
+                }
+
+                const order = orderData.find(o => o.ma_don_hang === orderId);
+                if (!order) {
+                    throw new Error(`Không tìm thấy đơn hàng với mã: ${orderId}`);
+                }
+
+                detailsData.forEach((item, index) => {
+                    const row = tbody.insertRow();
+                    const itemTotal = item.so_luong * item.gia_dai_ly;
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${item.mo_ta_san_pham}</td>
+                        <td>${item.don_vi_tinh}</td>
+                        <td>${item.so_luong}</td>
+                        <td>${formatCurrency(item.gia_dai_ly)}</td>
+                        <td>${formatCurrency(itemTotal)}</td>
+                    `;
+                });
+
+                const tongCong = order.tong_tien_sau_vat || order.tong_cong || 0;
+                const tongTienHang = order.tong_tien_sau_chiet_khau || order.tong_tien_truoc_chiet_khau || 0;
+                const tienThue = order.tong_tien_vat || 0;
+
+                tbody.innerHTML += `
+                    <tr class="total-row">
+                        <td style="text-align:center;" colspan="5">Tổng cộng</td>
+                        <td>${formatCurrency(tongTienHang)}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:center;" colspan="5">Thuế 10% V.A.T</td>
+                        <td>${formatCurrency(tienThue)}</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td style="text-align:center;" colspan="5">THÀNH TIỀN</td>
+                        <td>${formatCurrency(tongCong)}</td>
+                    </tr>
+                `;
+
+                document.getElementById('totalInWords').innerHTML = `<strong>Số tiền bằng chữ:</strong> ${numberToWords(tongCong)}`;
+            } catch (error) {
+                console.error('Lỗi khi cập nhật chi tiết đơn hàng:', error);
+                showError(`Lỗi khi cập nhật chi tiết đơn hàng: ${error.message}`);
+            }
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+        }
+
+        function numberToWords(number) {
+            const units = ["", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
+            const tens = ["", "mười", "hai mươi", "ba mươi", "bốn mươi", "năm mươi", "sáu mươi", "bảy mươi", "tám mươi", "chín mươi"];
+            const hundreds = ["", "một trăm", "hai trăm", "ba trăm", "bốn trăm", "năm trăm", "sáu trăm", "bảy trăm", "tám trăm", "chín trăm"];
+
+            function readThreeDigits(n) {
+                const hundred = Math.floor(n / 100);
+                const ten = Math.floor((n % 100) / 10);
+                const unit = n % 10;
+
+                let result = "";
+
+                result += hundreds[hundred] + " ";
+
+                if (ten === 0 && unit !== 0) {
+                    result += "lẻ " + units[unit];
+                } else if (ten !== 0) {
+                    result += tens[ten] + " " + units[unit];
+                } else if (unit === 0) {
+                    result += "";
+                } else {
+                    result += units[unit];
+                }
+
+                return result.trim();
+            }
+
+            function readNumber(n) {
+                if (n === 0) return "Không đồng";
+                let str = "";
+                const billions = Math.floor(n / 1e9);
+                const millions = Math.floor((n % 1e9) / 1e6);
+                const thousands = Math.floor((n % 1e6) / 1e3);
+                const hundreds = n % 1e3;
+
+                if (billions > 0) {
+                    str += readThreeDigits(billions) + " tỷ ";
+                }
+
+                if (millions > 0) {
+                    str += readThreeDigits(millions) + " triệu ";
+                }
+
+                if (thousands > 0) {
+                    str += readThreeDigits(thousands) + " nghìn ";
+                }
+
+                if (hundreds > 0) {
+                    str += readThreeDigits(hundreds);
+                }
+
+                return str.trim() + " đồng.";
+            }
+
+            function capitalizeFirstLetter(str) {
+                return str.charAt(0).toUpperCase() + str.slice(1);
+            }
+
+            return capitalizeFirstLetter(readNumber(number).replace(/\s+/g, ' '));
+        }
+
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        async function initializeForm() {
+            showLoading(); // Show loading overlay at the start
+
+            const orderId = getUrlParameter('ma_don_hang');
+            console.log('Mã đơn hàng từ URL:', orderId);
+            if (!orderId) {
+                showError("Không tìm thấy mã đơn hàng trong URL");
+                hideLoading(); // Hide loading overlay if there's an error
+                return;
+            }
+
+            try {
+                const [orderData, detailsData] = await Promise.all([
+                    fetchDataFromAppSheet('DONHANG', orderId),
+                    fetchDataFromAppSheet('DONHANG_CHITIET', orderId)
+                ]);
+
+                console.log('Dữ liệu đơn hàng:', orderData);
+                console.log('Chi tiết đơn hàng:', detailsData);
+
+                if (orderData && orderData.length > 0) {
+                    await updateOrderInfo(orderData, orderId);
+                } else {
+                    showError("Không tìm thấy dữ liệu đơn hàng");
+                    hideLoading(); // Hide loading overlay if there's an error
+                    return;
+                }
+
+                if (detailsData && detailsData.length > 0) {
+                    const specificDetails = detailsData.filter(detail => detail.ma_don_hang === orderId);
+                    if (specificDetails.length > 0) {
+                        await updateOrderDetails(specificDetails, orderId);
+                    } else {
+                        showError("Không tìm thấy chi tiết cho đơn hàng cụ thể");
+                    }
+                } else {
+                    showError("Không tìm thấy dữ liệu chi tiết đơn hàng");
+                }
+            } catch (error) {
+                console.error('Lỗi khi lấy dữ liệu:', error);
+                showError(`Có lỗi xảy ra khi tải dữ liệu đơn hàng: ${error.message}`);
+            } finally {
+                hideLoading(); // Hide loading overlay when everything is done
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeForm);
+    </script>
+</body>
+
+</html>
