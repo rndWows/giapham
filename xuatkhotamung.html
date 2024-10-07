@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phiếu Xuất Kho Tạm Ứng</title>
+    <style>
+        @page {
+            size: A4;
+        }
+
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            line-height: 1.6;
+            margin: 0;
+            background-color: #ccc;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+        }
+
+        p {
+            line-height: 1;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .company-info,
+        .form-info {
+            flex: 1;
+        }
+
+        .company-info p,
+        .form-info p,
+        .signature p {
+            margin: 0;
+            text-align: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #ffa500;
+        }
+
+        .total-row td {
+            font-weight: bold;
+        }
+
+        .signatures {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .signature {
+            text-align: center;
+            flex: 1;
+        }
+
+        #errorMessage {
+            color: red;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #ffa500;
+            border-top: 5px solid #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .export-buttons {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .export-button {
+            padding: 10px 20px;
+            margin: 0 10px;
+            background-color: #ffa500;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .export-button:hover {
+            background-color: #ff8c00;
+        }
+
+        @media print {
+            .export-buttons {
+                display: none;
+            }
+            body {
+                background-color: #fff;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loadingOverlay" style="display: none;">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container">
+        <div id="errorMessage"></div>
+        <div class="header">
+            <div class="company-info">
+                <p><strong>CÔNG TY TNHH MTV TM SX GIA PHẠM</strong></p>
+                <p>MST: 3801715370</p>
+            </div>
+            <div class="form-info">
+                <p><strong>Mẫu số 02 - VT</strong></p>
+                <p>(Ban hành theo Thông tư số 132/2018/TT-BTC ngày 28/12/2018 của Bộ Tài chính)</p>
+            </div>
+        </div>
+
+        <h1>PHIẾU XUẤT KHO</h1>
+
+        <p id="orderDate"><strong>Ngày: </strong></p>
+        <p id="Name"><strong>Họ và tên người nhận hàng:</strong></p>
+        <p id="exportReason"><strong>Lý do xuất kho:</strong></p>
+        <p id="warehouseLocation"><strong>Xuất tại kho (ngăn lô):</strong></p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>STT</th>
+                    <th>Mặt hàng</th>
+                    <th>ĐVT</th>
+                    <th>Số lượng</th>
+                </tr>
+            </thead>
+            <tbody id="orderDetails">
+                <!-- Order details will be inserted here -->
+            </tbody>
+        </table>
+
+        <div class="signatures">
+            <div class="signature">
+                <p><strong>Người nhận hàng</strong></p>
+                <p><em>(Ký, họ tên)</em></p>
+            </div>
+            <div class="signature">
+                <p><strong>Thủ kho</strong></p>
+                <p><em>(Ký, họ tên)</em></p>
+            </div>
+            <div class="signature">
+                <p><strong>Kế toán trưởng</strong></p>
+                <p><em>(Hoặc bộ phận có phân công)</em></p>
+            </div>
+            <div class="signature">
+                <p><strong>Giám đốc</strong></p>
+                <p><em>(Ký, họ tên)</em></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="export-buttons">
+        <button id="printPDF" class="export-button">In PDF</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        const appId = 'e87ce747-c3cf-4eb1-8702-cda10c3ecd5d';
+        const apiKey = 'V2-TT9gl-OImkm-dnOqs-dtheK-ucRDZ-4pGEh-xfjtb-PkHyK';
+
+        function getUrlParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        async function apiRequest(tableName, action, data) {
+            const apiUrl = `https://www.appsheet.com/api/v2/apps/${appId}/tables/${tableName}/Action`;
+            console.log(`Sending request to ${apiUrl}`, data);
+            try {
+                const response = await $.ajax({
+                    url: apiUrl,
+                    method: 'POST',
+                    headers: {
+                        'ApplicationAccessKey': apiKey,
+                        'Content-Type': 'application/json'
+                    },
+                    data: JSON.stringify({
+                        Action: action,
+                        Properties: {
+                            Locale: 'vi-VN',
+                            Timezone: 'Asia/Ho_Chi_Minh'
+                        },
+                        ...data
+                    })
+                });
+                console.log(`Response from ${tableName}:`, response);
+                return response;
+            } catch (error) {
+                console.error(`API request error for ${tableName}:`, error);
+                throw error;
+            }
+        }
+
+        async function fetchPXKTamUngData(maPTU) {
+            showLoading();
+            try {
+                const pxkTamUngResponse = await apiRequest('PXK_TAMUNG', 'Find', {
+                    Selector: `[ma_phieu_ta m_ung] = '${maPTU}'`
+                });
+
+
+                if (pxkTamUngResponse && Array.isArray(pxkTamUngResponse) && pxkTamUngResponse.length > 0) {
+                    const pxkTamUngData = pxkTamUngResponse.find(item => item['ma_phieu_tam_ung'] === maPTU);
+
+                    if (pxkTamUngData) {
+                        // Populate the main PXK_TAMUNG data
+                        $('#orderDate').html(`<strong>Ngày: </strong>${formatDate(pxkTamUngData.ngay_tamunghang)}`);
+                        $('#Name').html(`<strong>Họ và tên người nhận hàng: </strong>${pxkTamUngData.ten_nhan_vien}`);
+                        $('#exportReason').html(`<strong>Lý do xuất kho: </strong>${pxkTamUngData.ly_do_tam_ung}`);
+                        $('#warehouseLocation').html(`<strong>Xuất tại kho (ngăn lô): </strong>kho Công Ty Gia Phạm`);
+
+                        // Fetch and populate PXK_TAMUNG_CHITIET data
+                        const pxkTamUngChiTietResponse = await apiRequest('PXK_TAMUNG_CHITIET', 'Find', {
+                            Selector: `[ma_phieu_tam_ung] = '${maPTU}'`
+                        });
+
+
+                        if (pxkTamUngChiTietResponse && Array.isArray(pxkTamUngChiTietResponse) && pxkTamUngChiTietResponse.length > 0) {
+                            // Lọc các đối tượng có mã 'ma_phieu_tam_ung' khớp với 'maPTU'
+                            const filteredDetails = pxkTamUngChiTietResponse.filter(item => item['ma_phieu_tam_ung'] === maPTU);
+
+                            if (filteredDetails.length > 0) {
+                                populateOrderDetails(filteredDetails);
+                            } else {
+                                showError(`Không tìm thấy chi tiết nào cho phiếu tạm ứng với mã ${maPTU}.`);
+                            }
+                        } else {
+                            showError("Không nhận được dữ liệu chi tiết phiếu tạm ứng hợp lệ.");
+                        }
+
+                    } else {
+                        showError(`Không tìm thấy phiếu tạm ứng với mã ${maPTU}.`);
+                    }
+                } else {
+                    showError("Không nhận được dữ liệu phiếu tạm ứng hợp lệ.");
+                }
+            } catch (error) {
+                console.error("Error fetching PXK_TAMUNG data:", error);
+                showError("Đã xảy ra lỗi khi lấy dữ liệu phiếu tạm ứng.");
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function populateOrderDetails(details) {
+            const orderDetailsTable = $('#orderDetails');
+            orderDetailsTable.empty();
+
+            details.forEach((item, index) => {
+                const row = $('<tr>');
+                row.append($('<td>').text(index + 1));
+                row.append($('<td>').text(item.ten_hang_hoa));
+                row.append($('<td>').text(item.don_vi_tinh));
+                row.append($('<td>').text(item.so_luong));
+
+                orderDetailsTable.append(row);
+            });
+        }
+
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('vi-VN');
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+        }
+
+        function showError(message) {
+            $('#errorMessage').text(message).show();
+        }
+
+        function showLoading() {
+            $('#loadingOverlay').show();
+        }
+
+        function hideLoading() {
+            $('#loadingOverlay').hide();
+        }
+
+        $(document).ready(function () {
+            const maPTU = getUrlParameter('ma_phieu_ta m_ung');
+            if (maPTU) {
+                fetchPXKTamUngData(maPTU);
+            } else {
+                showError("Không tìm thấy mã phiếu tạm ứng trong URL.");
+            }
+
+            $('#printPDF').click(function () {
+                window.print();
+            });
+        });
+    </script>
+</body>
+
+</html>
