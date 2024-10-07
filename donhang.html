@@ -341,51 +341,64 @@
         }
 
         // Cập nhật hàm updateOrderDetails để sử dụng dữ liệu BANHANG nếu có
-        function updateOrderDetails(detailsData, orderId, banHangData) {
+        async function updateOrderDetails(detailsData, orderId) {
             const tbody = document.getElementById('orderDetails');
             tbody.innerHTML = '';
 
-            let orderData = banHangData && banHangData.length > 0 ? banHangData : detailsData;
-            const order = orderData.find(o => o.ma_don_hang === orderId);
+            try {
+                let orderData = await fetchDataFromAppSheet('BANHANG', orderId);
 
-            if (!order) {
-                throw new Error(`Không tìm thấy đơn hàng với mã: ${orderId}`);
+                if (!orderData || orderData.length === 0) {
+                    console.log("Không tìm thấy dữ liệu trong BANHANG, đang sử dụng dữ liệu từ DONHANG");
+                    orderData = await fetchDataFromAppSheet('DONHANG', orderId);
+                }
+
+                if (!orderData || orderData.length === 0) {
+                    throw new Error("Không tìm thấy dữ liệu đơn hàng");
+                }
+
+                const order = orderData.find(o => o.ma_don_hang === orderId);
+                if (!order) {
+                    throw new Error(`Không tìm thấy đơn hàng với mã: ${orderId}`);
+                }
+
+                detailsData.forEach((item, index) => {
+                    const row = tbody.insertRow();
+                    const itemTotal = item.so_luong * item.gia_dai_ly;
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${item.mo_ta_san_pham}</td>
+                        <td>${item.don_vi_tinh}</td>
+                        <td>${item.so_luong}</td>
+                        <td>${formatCurrency(item.gia_dai_ly)}</td>
+                        <td>${formatCurrency(itemTotal)}</td>
+                    `;
+                });
+
+                const tongCong = order.tong_tien_sau_vat || order.tong_cong || 0;
+                const tongTienHang = order.tong_tien_sau_chiet_khau || order.tong_tien_truoc_chiet_khau || 0;
+                const tienThue = order.tong_tien_vat || 0;
+
+                tbody.innerHTML += `
+                    <tr class="total-row">
+                        <td style="text-align:center;" colspan="5">Tổng cộng</td>
+                        <td>${formatCurrency(tongTienHang)}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:center;" colspan="5">Thuế 10% V.A.T</td>
+                        <td>${formatCurrency(tienThue)}</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td style="text-align:center;" colspan="5">THÀNH TIỀN</td>
+                        <td>${formatCurrency(tongCong)}</td>
+                    </tr>
+                `;
+
+                document.getElementById('totalInWords').innerHTML = `<strong>Số tiền bằng chữ:</strong> ${numberToWords(tongCong)}`;
+            } catch (error) {
+                console.error('Lỗi khi cập nhật chi tiết đơn hàng:', error);
+                showError(`Lỗi khi cập nhật chi tiết đơn hàng: ${error.message}`);
             }
-
-            detailsData.forEach((item, index) => {
-                const row = tbody.insertRow();
-                const itemTotal = item.so_luong * item.gia_dai_ly;
-                row.innerHTML = `
-            <td>${index + 1}</td>
-            <td>${item.mo_ta_san_pham}</td>
-            <td>${item.don_vi_tinh}</td>
-            <td>${item.so_luong}</td>
-            <td>${formatCurrency(item.gia_dai_ly)}</td>
-            <td>${formatCurrency(itemTotal)}</td>
-        `;
-            });
-
-            const tongCong = order.tong_tien_sau_vat || order.tong_cong || 0;
-            const tongTienHang = order.tong_tien_sau_chiet_khau || order.tong_tien_truoc_chiet_khau || 0;
-            const tienThue = order.tong_tien_vat || 0;
-            const VAT = order['%vat'] * 100 || 0;
-
-            tbody.innerHTML += `
-        <tr class="total-row">
-            <td style="text-align:center;" colspan="5">Tổng cộng</td>
-            <td>${formatCurrency(tongTienHang)}</td>
-        </tr>
-        <tr>
-            <td style="text-align:center;" colspan="5">Thuế <span> ${VAT} %</span> V.A.T</td>
-            <td>${formatCurrency(tienThue)}</td>
-        </tr>
-        <tr class="total-row">
-            <td style="text-align:center;" colspan="5">THÀNH TIỀN</td>
-            <td>${formatCurrency(tongCong)}</td>
-        </tr>
-    `;
-
-            document.getElementById('totalInWords').innerHTML = `<strong>Số tiền bằng chữ:</strong> ${numberToWords(tongCong)}`;
         }
 
         function formatCurrency(amount) {
@@ -499,7 +512,7 @@
                 if (detailsData && detailsData.length > 0) {
                     const specificDetails = detailsData.filter(detail => detail.ma_don_hang === orderId);
                     if (specificDetails.length > 0) {
-                        updateOrderDetails(specificDetails, orderId, banHangData);
+                        await updateOrderDetails(specificDetails, orderId, banHangData);
                     } else {
                         showError("Không tìm thấy chi tiết cho đơn hàng cụ thể");
                     }
